@@ -3,12 +3,16 @@ from anthropic import Anthropic
 from dotenv import load_dotenv
 
 load_dotenv()
-print("hello")
 
 client = Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
 
-user_goal = input("What we are going to make today? ")
-print(f"Goal locked in: {user_goal}\n")
+try:
+    with open("feedback.txt", "r") as changes_file:
+        saved_changes = changes_file.read()
+except FileNotFoundError:
+    saved_changes = ""
+
+
 
 system_message = """
     You are Remi, a smart chef, that experts in culinary and meal planning. your aim is to create a delicious, step-by-step recepies, based on the ingrediants the user already has at home, while trictly adhering to dietary restrictions and prefereneces (alergies, diets, health, etc.)
@@ -32,13 +36,17 @@ system_message = """
     - [Response]: The detailed recipe, including name, ingredients list, and instructions.
     - [Next Step]: One concrete action the user can take (e.g., asking to pass this recipe to the Nutritionist Agent for analysis, or asking for a replacement ingredient).
     """
+system_message = system_message + f"\nHere are past improvements you must remember:\n{saved_changes}"
+
+
 def run_chat():
+    user_goal = input("What we are going to make today? ")
+    print(f"Goal locked in: {user_goal}\n")
     print('You: (type exit to quit)')
     history = []
-
+    favorits = {}
     total_con_tokens = 0
-
-    scores_list = []  
+    reply = ""
     while True:
 
         turn_number = int(len(history) / 2) + 1
@@ -46,9 +54,48 @@ def run_chat():
 
         user_input = input('>> ')
 
+        if user_input.startswith('/get '):
+            recipe_name = user_input.replace('/get ', '')
+            if recipe_name in favorits:
+                print(favorits[recipe_name])
+            else:
+                print(f"Sorry, you don't have a recipe named '{recipe_name}' in your favorites.")
+            continue
+
         if user_input.lower() == 'exit':
+            while True:
+                user_rating = input("\nHow would you rate this meal? (1-5): ").strip()
+                if user_rating in ['1', '2', '3', '4', '5']:
+                    print(f"Thank you for your feedback! You rated us: {user_rating}/5")
+                    if int(user_rating) < 4:
+                        changes = input("Can you tell us what was wrong? ")
+                        with open("feedback.txt", "a") as changes_file:
+                            changes_file.write(changes + "\n")
+                        print("Thank you! we will try to improve next time")
+
+                    break
+                else:
+                    print("Invalid input. Please enter a number between 1 and 5.")
             
+            if 'reply' in locals() or 'reply' in globals():
+                comment = input("\nWould you like to add this final recipe to 'favorites'? (yes/no): ").strip().lower()
+                if comment == "yes":
+                    name = input("How would you like to call this recipe? ").strip()
+                    favorits[name] = reply
+
+                    with open("favorites.txt", "a") as fav_file:
+                        fav_file.write(f"=== Recipe Name: {name} ===\n")
+                        fav_file.write(reply)
+                        fav_file.write("\n\n---------------------------------------\n\n")
+                    print(f"Recipe '{name}' saved to favorites successfully!")
+
+            if 'reply' in locals() or 'reply' in globals():
+                switch = input("\nDo you want to analyze that meal with the Nutritionist? (yes/no): ").strip().lower()
+                if switch == 'yes':
+                    return reply 
+
             break
+
 
 
         if user_input.lower() == 'reset':

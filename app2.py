@@ -263,7 +263,7 @@ what they did well, and one thing to improve.
     return response.content[0].text
 
 
-if __name__ == "__main__":
+def start_nutritionist_chat():
     print("Welcome to NutriGuide — Nutrition Coach")
 
     profile = get_profile()
@@ -276,12 +276,17 @@ if __name__ == "__main__":
     print("Type 'exit' to quit.")
 
     history = []
+    last_reply = None
 
     while True:
         user_input = input("\nYou: ").strip()
 
         if user_input.lower() == "exit":
             print("Goodbye!")
+            if last_reply is not None:
+                switch = input("\nDo you want to get a healthier alternative from the recipe maker? (yes/no): ")
+                if switch.lower() == 'yes':
+                    return last_reply
             break
 
         if user_input.lower() == "reset":
@@ -296,11 +301,7 @@ if __name__ == "__main__":
 
         if user_input.lower() == "photo":
             image_path = input("Enter the image file path: ").strip()
-
-            user_note = input(
-                "Optional: describe the meal or serving size: "
-            ).strip()
-
+            user_note = input("Optional: describe the meal or serving size: ").strip()
             print("\nNutriGuide:")
             print(analyze_food_image(image_path, profile, user_note))
             continue
@@ -310,4 +311,8 @@ if __name__ == "__main__":
             continue
 
         print("\nNutriGuide:")
-        print(run_agent(user_input, profile, history))
+        last_reply = run_agent(user_input, profile, history)
+        print(last_reply)
+
+if __name__ == "__main__":
+    start_nutritionist_chat()
